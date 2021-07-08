@@ -1,0 +1,28 @@
+---
+title: "relatorio"
+output: html_document
+---
+
+```{r setup, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(here)
+```
+
+```{r}
+dados_carga <- read_table2(here::here("data/wl_fitdist_best.txt"), col_names = TRUE)
+```
+
+
+```{r}
+dados_carga = dados_carga %>% 
+    group_by(k, distribution, Trace, stats.attr) %>% 
+    summarize(gof = sum(Fraction)) 
+```
+```{r}
+dados_carga %>%
+  ggplot(mapping = aes(y = gof, x = k, color = distribution )) +
+  facet_grid(stats.attr ~ Trace) + 
+  geom_line()
+```
+
+ 

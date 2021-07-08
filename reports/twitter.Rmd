@@ -1,0 +1,223 @@
+---
+title: "twitter"
+output: html_document
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(here)
+library(tidyr)
+library(broom)
+library(boot)
+```
+
+
+```{r}
+dados = read_csv2(here("data/sentimento31.csv"),
+  col_types = cols(
+  id = col_double(),
+  regiao = col_character(),
+  estado = col_character(),
+  sigla = col_character(),
+  vitoria_ = col_character(),
+  usa_twitter_ = col_character(),
+  sent_twitter_ = col_double(),
+  usa_instagram_ = col_character(),
+  sent_instagram_ = col_double(),
+  anos_ = col_number(),
+  foi_diretor_ = col_character(),
+  foi_coordenador_ = col_character(),
+  foi_fg_ = col_character(),
+  publicacoes_twitter_ = col_double(),
+  seguidores_twitter_ = col_double(),
+  seguindo_twitter_ = col_double(),
+  publicacoes_instagram_ = col_double(),
+  seguidores_instagram_ = col_double(),
+  seguindo_instagram_ = col_double()
+))
+
+
+dados = dados %>% 
+  mutate(vitoria = (vitoria_ == "S") * 1)
+
+glimpse(dados)
+
+```
+
+Removendo os que não utilizam nem twitter nem Instagram
+```{r}
+dados = dados %>% 
+  filter(!(usa_twitter_ == "N" & usa_instagram_ == "N")) %>% 
+  filter(!sent_twitter_ == 0) %>% 
+  filter(!sent_instagram_ == 0)
+  
+glimpse(dados)
+```
+
+22 candidatos utilizam o Twitter
+```{r}
+dados %>% 
+  count(usa_twitter_ == "S") 
+```
+
+23 candidatos utilizam o Instagram
+```{r}
+dados %>% 
+  count(usa_instagram_ == "S") 
+```
+
+O Sentimento do Twitter
+
+```{r}
+dados %>% ggplot(mapping = aes(y=sent_twitter_, x="candidato")) +
+  geom_point(alpha = 0.1) +
+  geom_jitter(alpha = 0.1, width = .04)
+```
+
+O Sentimento do Twitter x vitoria_
+
+```{r}
+dados %>% ggplot(mapping = aes(y=sent_twitter_, x=vitoria_)) +
+  geom_point(alpha=.1) +
+  geom_jitter(alpha = 0.1, width = .04)
+```
+
+O Sentimento do Instagram
+
+```{r}
+dados %>% ggplot(mapping = aes(y=sent_instagram_, x="candidato")) +
+  geom_point(alpha = 0.1) +
+  geom_jitter(alpha = 0.1, width = .02)
+```
+
+O Sentimento do Twitter x vitoria_
+
+```{r}
+dados %>% ggplot(mapping = aes(y=sent_instagram_, x=vitoria_)) +
+  geom_point(alpha=.1) +
+  geom_jitter(alpha = 0.1, width = .02)
+```
+
+```{r}
+dados %>% ggplot(mapping = aes(x= sent_twitter_, y = sent_instagram_)) +
+  geom_point()
+```
+
+**Existe uma correlação fraca entre o sentimento do twitter e o sentimento do instagram**
+```{r}
+cor(x= dados$sent_twitter_, y=dados$sent_instagram_)
+```
+
+**A correlação entre a vitoria e o sentimento do twitter não é relevante**
+
+```{r}
+cor(x= dados$vitoria, y=dados$sent_twitter_)
+```
+**Existe uma correlação média entre a vitoria e o sentimento do instagram**
+```{r}
+cor(x= dados$vitoria, y=dados$sent_instagram_)
+```
+
+**Histogramas**
+
+```{r}
+dados %>%  ggplot(aes(x = sent_instagram_)) +
+  facet_wrap(~sigla) + 
+  geom_histogram(binwidth = .09, fill = "coral", color="black") +
+  geom_rug()
+```
+
+**Regressões**
+Regressao logísitca vitoria e Sentimento do twitter
+```{r}
+logit <- glm(vitoria ~ sent_twitter_, data = dados)
+summary(logit)
+```
+**Existe uma relação inversa entre a vitoria e o sentimento do instagram**
+
+```{r}
+logit <- glm(vitoria ~ sent_instagram_, data = dados)
+summary(logit)
+```
+
+somente universidade twitter
+
+```{r}
+dados_uf = dados %>%
+  filter(sigla=="UF")
+
+logit <- glm(vitoria ~ sent_twitter_, data = dados_uf)
+summary(logit)
+```
+
+somente universidade e instagram
+
+```{r}
+dados_uf = dados %>%
+  filter(sigla=="UF")
+
+logit <- glm(vitoria ~ sent_twitter_, data = dados_uf)
+summary(logit)
+```
+
+somente instituto federal e instagram
+
+**Existe efeito do sentimento do instagram no twitter para os reitores do instituto federal**
+
+```{r}
+dados_if = dados %>%
+  filter(sigla=="IF")
+
+logit <- glm(vitoria ~ sent_instagram_, data = dados_if)
+summary(logit)
+```
+**Em média o sentimento demonstrado no IF é menor do que o sentimento da UF**
+
+```{r}
+dados %>% 
+  select(sigla, sent_instagram_) %>% 
+  group_by(sigla) %>% 
+  summarise(media = mean(sent_instagram_), .groups = "drop") 
+```
+
+
+```{r}
+theta <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(sigla) %>% 
+        summarise(media = mean(sent_instagram_), .groups = "drop")
+    uf = agrupado %>% filter(sigla == "UF") %>% pull(media)
+    ifs = agrupado %>% filter(sigla == "IF") %>% pull(media)
+    uf - ifs
+}
+
+booted <- boot(data = dados, 
+               statistic = theta, 
+               R = 2000)
+
+ci = tidy(booted, 
+          conf.level = .95,
+          conf.method = "bca",
+          conf.int = TRUE)
+
+glimpse(ci)
+```
+
+```{r}
+ci %>% 
+  ggplot(aes(
+            ymin = conf.low,
+            y = statistic,
+            ymax = conf.high,
+            x = "Média do Sentimento do Instagram"
+        )) +
+        geom_linerange() +
+        geom_point(color = "coral", size = 2) +
+        scale_y_continuous(limits = c(-1, 1)) +
+        labs(x = "", y = "Diferença entre as médias do sentimento do instagram entre instituto e universidade") +
+        coord_flip()
+```
+**Não é possível afirmar se existe uma diferença em média entre o sentimento do instagram das universidades e dos institutos federais, conforme análise do IC**
+
+
