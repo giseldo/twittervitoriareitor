@@ -104,6 +104,7 @@ dados %>% ggplot(mapping = aes(x= sent_twitter_, y = sent_instagram_)) +
 ```
 
 **Existe uma correlação fraca entre o sentimento do twitter e o sentimento do instagram**
+
 ```{r}
 cor(x= dados$sent_twitter_, y=dados$sent_instagram_)
 ```
@@ -113,7 +114,9 @@ cor(x= dados$sent_twitter_, y=dados$sent_instagram_)
 ```{r}
 cor(x= dados$vitoria, y=dados$sent_twitter_)
 ```
+
 **Existe uma correlação média entre a vitoria e o sentimento do instagram**
+
 ```{r}
 cor(x= dados$vitoria, y=dados$sent_instagram_)
 ```
@@ -128,39 +131,29 @@ dados %>%  ggplot(aes(x = sent_instagram_)) +
 ```
 
 **Regressões**
-Regressao logísitca vitoria e Sentimento do twitter
-```{r}
-logit <- glm(vitoria ~ sent_twitter_, data = dados)
-summary(logit)
-```
-**Existe uma relação inversa entre a vitoria e o sentimento do instagram**
+
+Regressao logísitca vitoria e sentimento do twitter e instagram para institutos e universidades
+
+**Existe uma relação inversa entre a vitoria e o sentimento do instagram com efeito relevante**
 
 ```{r}
-logit <- glm(vitoria ~ sent_instagram_, data = dados)
-summary(logit)
-```
-
-somente universidade twitter
-
-```{r}
-dados_uf = dados %>%
-  filter(sigla=="UF")
-
-logit <- glm(vitoria ~ sent_twitter_, data = dados_uf)
+logit <- glm(vitoria ~ sent_twitter_ + sent_instagram_, data = dados)
 summary(logit)
 ```
 
-somente universidade e instagram
+regressao vitoria com twitter e instagram, para universidade 
+
+**sem efeito para somente universidades**
 
 ```{r}
 dados_uf = dados %>%
   filter(sigla=="UF")
 
-logit <- glm(vitoria ~ sent_twitter_, data = dados_uf)
+logit <- glm(vitoria ~ sent_twitter_ + sent_instagram_, data = dados_uf)
 summary(logit)
 ```
 
-somente instituto federal e instagram
+regressao vitoria twitter e instagram, para instituto federal
 
 **Existe efeito do sentimento do instagram no twitter para os reitores do instituto federal**
 
@@ -168,7 +161,7 @@ somente instituto federal e instagram
 dados_if = dados %>%
   filter(sigla=="IF")
 
-logit <- glm(vitoria ~ sent_instagram_, data = dados_if)
+logit <- glm(vitoria ~ sent_twitter_+ sent_instagram_, data = dados_if)
 summary(logit)
 ```
 **Em média o sentimento demonstrado no IF é menor do que o sentimento da UF**
@@ -204,6 +197,8 @@ ci = tidy(booted,
 glimpse(ci)
 ```
 
+**Não é possível afirmar se existe uma diferença em média entre o sentimento do instagram das universidades e dos institutos federais, conforme análise do IC**
+
 ```{r}
 ci %>% 
   ggplot(aes(
@@ -218,6 +213,7 @@ ci %>%
         labs(x = "", y = "Diferença entre as médias do sentimento do instagram entre instituto e universidade") +
         coord_flip()
 ```
-**Não é possível afirmar se existe uma diferença em média entre o sentimento do instagram das universidades e dos institutos federais, conforme análise do IC**
+
+
 
 
